@@ -1,6 +1,5 @@
-# ==========================================
-# EMNIST Letters Classification with HOG + SVM + LOOCV
-# ==========================================
+# Source code for EMNIST Letters classification using SVM with HOG features
+# 4212311029 - Andrean Bagas Khudori
 
 import numpy as np
 import pandas as pd
@@ -16,9 +15,9 @@ from sklearn.model_selection import GridSearchCV, LeaveOneOut, cross_val_predict
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 
 
-# ==========================================
-# 1. LOAD DATASET
-# ==========================================
+
+# DATASET
+
 print("=== Memuat dataset EMNIST Letters ===")
 train_df = pd.read_csv('emnist-letters-train.csv')
 print("Shape data:", train_df.shape)
@@ -28,24 +27,24 @@ y_all = train_df.iloc[:, 0].values
 X_all = train_df.iloc[:, 1:].values
 X_all = X_all.reshape(-1, 28, 28)
 
-# ==========================================
-# 2. PERBAIKI ORIENTASI GAMBAR
-# ==========================================
+
+# ORIENTASI GAMBAR
+
 def fix_emnist_orientation(images):
     fixed = []
     for img in images:
-        img = np.rot90(img, 3)   # rotasi 90° ke kiri
-        img = np.flipud(img)     # flip vertikal
+        img = np.rot90(img, 3)  
+        img = np.flipud(img)     
         fixed.append(img)
     return np.array(fixed)
 
 print("Memperbaiki orientasi gambar...")
 X_all = fix_emnist_orientation(X_all)
 
-# ==========================================
-# 3. SAMPLING SEIMBANG 500 PER KELAS
-# ==========================================
-def balanced_sample(X, y, n_per_class=50, random_state=42):
+
+# SAMPLING 50 PER KELAS
+
+def balanced_sample(X, y, n_per_class=500, random_state=42):
     rng = np.random.RandomState(random_state)
     classes = np.unique(y)
     Xs, ys = [], []
@@ -60,9 +59,9 @@ print("Sampling 500 data per kelas...")
 X_sample, y_sample = balanced_sample(X_all, y_all)
 print("Total data:", X_sample.shape[0])
 
-# ==========================================
-# 4. EKSTRAKSI FITUR HOG
-# ==========================================
+
+# FITUR HOG
+
 def extract_hog_features(images, orientations=9, pixels_per_cell=(8,8), cells_per_block=(2,2)):
     feats = []
     for img in images:
@@ -79,16 +78,16 @@ X_hog = extract_hog_features(X_sample)
 print("Selesai! Waktu:", round(time.time() - start, 2), "detik")
 print("Dimensi fitur HOG:", X_hog.shape)
 
-# ==========================================
-# 5. STANDARISASI DATA
-# ==========================================
+
+# STANDARISASI DATA
+
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X_hog)
 print("Data berhasil distandarisasi.")
 
-# ==========================================
-# 6. TUNING PARAMETER SVM (GRID SEARCH)
-# ==========================================
+
+# TUNING PARAMETER SVM (GRID SEARCH)
+
 print("\n=== Proses tuning parameter SVM ===")
 param_grid = {
     'kernel': ['linear', 'rbf'],
@@ -102,12 +101,12 @@ grid.fit(X_scaled, y_sample)
 best_svm = grid.best_estimator_
 print("Parameter terbaik:", grid.best_params_)
 
-# ==========================================
-# 7. EVALUASI DENGAN LOOCV (SUBSET)
-# ==========================================
-print("\n=== Evaluasi model dengan LOOCV (subset 1300 data) ===")
-X_small = X_scaled[:1300]
-y_small = y_sample[:1300]
+
+# LOOCV (SUBSET)
+
+print("\n=== Evaluasi model dengan LOOCV (subset 13000 data) ===")
+X_small = X_scaled[:13000]
+y_small = y_sample[:13000]
 
 loo = LeaveOneOut()
 start = time.time()
@@ -121,22 +120,22 @@ print(classification_report(y_small, y_pred, digits=4))
 acc = accuracy_score(y_small, y_pred)
 print("Akurasi total:", round(acc * 100, 2), "%")
 
-# ==========================================
-# 8. VISUALISASI CONFUSION MATRIX
-# ==========================================
+
+# VISUALISASI CONFUSION MATRIX
+
 cm = confusion_matrix(y_small, y_pred)
 
 plt.figure(figsize=(8,6))
 sns.heatmap(cm, cmap='Blues', cbar=True)
-plt.title("Confusion Matrix (LOOCV Subset 1300 Data)")
+plt.title("Confusion Matrix (LOOCV Subset 13000 Data)")
 plt.xlabel("Predicted")
 plt.ylabel("True")
 plt.tight_layout()
 plt.show()
+ 
 
-# ==========================================
-# 9. SIMPAN MODEL DAN HASIL
-# ==========================================
+# SIMPAN MODEL DAN HASIL
+
 print("\nMenyimpan model dan hasil...")
 joblib.dump(best_svm, 'svm_emnist_model.joblib')
 joblib.dump(scaler, 'hog_scaler.joblib')
